@@ -1,0 +1,23 @@
+# LaTeX build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.synctex.gz
+*.dvi
+*.bbl
+*.blg
+
+# Generated PDF (optional, uncomment if you want to ignore it)
+# *.pdf
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/

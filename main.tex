@@ -1,0 +1,1336 @@
+\documentclass[aspectratio=169]{beamer}
+\usetheme{default}
+\usecolortheme{default}
+\usefonttheme{serif}
+
+% Packages
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{booktabs}
+
+% Color scheme: white background with blue/black accents
+\definecolor{darkblue}{RGB}{0,51,102}
+\setbeamercolor{frametitle}{fg=white,bg=darkblue}
+\setbeamercolor{title}{fg=darkblue}
+\setbeamercolor{structure}{fg=darkblue}
+\setbeamercolor{normal text}{fg=black,bg=white}
+
+% Make frametitle bold
+\setbeamerfont{frametitle}{series=\bfseries}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered]
+
+% Placeholder figure command
+\newcommand{\placeholderfig}[2][0.5\textwidth]{%
+  \begin{center}
+  \fbox{\begin{minipage}{#1}\centering\vspace{1.2cm}{\footnotesize\textit{#2}}\vspace{1.2cm}\end{minipage}}
+  \end{center}
+}
+
+% Title Information
+\title{\textbf{Chapter 3: Feature Extraction}}
+\subtitle{Computer Vision -- Unit 03}
+\author{Computer Vision Course}
+\date{February 2026}
+
+\begin{document}
+
+% ============== SLIDE 1 ==============
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% ============== SLIDE 2 ==============
+\begin{frame}{Table of Contents}
+    \tableofcontents
+\end{frame}
+
+% =====================================================================
+\section{Introduction to Feature Extraction}
+% =====================================================================
+
+% ============== SLIDE 3 ==============
+\begin{frame}{What is Feature Extraction?}
+    \begin{itemize}
+        \item \textbf{Feature extraction} is the process of identifying and isolating meaningful patterns, structures, or descriptors from raw image data.
+        \item Goal: Reduce data dimensionality while retaining discriminative information.
+        \item Common features: \textbf{Edges, Corners, Blobs, Ridges, Textures}.
+    \end{itemize}
+    \begin{block}{Why Feature Extraction?}
+        \begin{itemize}
+            \item Enables object recognition, tracking, image stitching, 3D reconstruction.
+            \item Forms the foundation of many computer vision pipelines.
+        \end{itemize}
+    \end{block}
+    \begin{figure}[h]
+        \centering
+        \includegraphics[width=0.45\textwidth]{images/feature_extraction_overview.png}
+        \caption{Original image $\rightarrow$ Detected features (edges, corners) overlaid}
+    \end{figure}
+\end{frame}
+
+% ============== SLIDE 4 ==============
+\begin{frame}{Taxonomy of Features}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \begin{itemize}
+                \item \textbf{Edges}: Boundaries between regions (Canny, LOG, DOG)
+                \item \textbf{Lines}: Straight structures (Hough Transform)
+                \item \textbf{Corners / Interest Points}: Harris, Hessian Affine
+                \item \textbf{Descriptors}: SIFT, SURF, HOG, GLOH
+                \item \textbf{Multi-scale}: Scale-Space, Image Pyramids
+                \item \textbf{Frequency-based}: Gabor Filters, DWT
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.42\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/feature_taxonomy.png}
+                \caption{Hierarchy chart showing feature types branching from ``Feature Extraction''}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Edge Detection}
+% =====================================================================
+
+% ============== SLIDE 5 ==============
+\begin{frame}{Edge Detection -- Overview}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \begin{itemize}
+                \item An \textbf{edge} is a significant local change in image intensity.
+                \item Edges correspond to object boundaries, surface markings, shadows, or depth discontinuities.
+                \item Mathematically:
+                      \[
+                          \nabla I = \left(\frac{\partial I}{\partial x},\; \frac{\partial I}{\partial y}\right)
+                      \]
+                \item Magnitude: $|\nabla I| = \sqrt{I_x^2 + I_y^2}$
+                \item Direction: $\theta = \arctan(I_y / I_x)$
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.42\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/edge_intensity_profile.png}
+                \caption{Image showing intensity profile across an edge with gradient plot}
+            \end{figure}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+% ============== SLIDE 6 ==============
+\begin{frame}{Canny Edge Detector}
+    \begin{block}{Canny (1986) -- Optimal Edge Detector}
+        Designed to satisfy three criteria: \textbf{Good detection}, \textbf{Good localisation}, \textbf{Single response}.
+    \end{block}
+    \textbf{Steps of the Canny Algorithm:}
+    \begin{enumerate}
+        \item \textbf{Gaussian Smoothing}: Convolve with $G_\sigma$ to reduce noise.
+              \[G_\sigma(x,y) = \frac{1}{2\pi\sigma^2} \exp\!\left(-\frac{x^2+y^2}{2\sigma^2}\right)\]
+        \item \textbf{Gradient Computation}: Compute $|\nabla I|$ and $\theta$ using Sobel or similar operators.
+        \item \textbf{Non-Maximum Suppression (NMS)}: Thin edges by keeping only local maxima along gradient direction.
+        \item \textbf{Double Thresholding}: Use $T_{\text{high}}$ and $T_{\text{low}}$ to classify strong, weak, and non-edges.
+        \item \textbf{Edge Tracking by Hysteresis}: Weak edges connected to strong edges are kept.
+    \end{enumerate}
+\end{frame}
+
+% ============== SLIDE 7 ==============
+\begin{frame}{Canny Edge Detector -- Illustration}
+    \begin{columns}
+        \begin{column}{0.48\textwidth}
+            \textbf{Key Parameters:}
+            \begin{itemize}
+                \item $\sigma$ -- controls smoothing level.
+                \item $T_{\text{high}}, T_{\text{low}}$ -- thresholds for hysteresis.
+                \item Typical ratio: $T_{\text{high}} / T_{\text{low}} \approx 2:1$ or $3:1$.
+            \end{itemize}
+            \begin{alertblock}{Important}
+                Larger $\sigma$ $\Rightarrow$ fewer edges detected (more smoothing).\\
+                Smaller $\sigma$ $\Rightarrow$ more edges but also more noise.
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.7\textwidth]{images/canny_pipeline.png}
+                \caption{Step-by-step Canny pipeline -- (a) Original (b) Smoothed (c) Gradient (d) NMS (e) Final edges}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 8 ==============
+\begin{frame}{Laplacian of Gaussian (LOG)}
+    \begin{itemize}
+        \item The \textbf{Laplacian} $\nabla^2 I$ is a second-order derivative operator:
+              \[
+                  \nabla^2 I = \frac{\partial^2 I}{\partial x^2} + \frac{\partial^2 I}{\partial y^2}
+              \]
+        \item Direct Laplacian is very sensitive to noise $\Rightarrow$ first smooth with Gaussian.
+        \item \textbf{LOG} = Laplacian applied to Gaussian-smoothed image:
+              \[
+                  \text{LOG}(x,y) = \nabla^2 \big[G_\sigma * I\big] = \big[\nabla^2 G_\sigma\big] * I
+              \]
+        \item The LOG kernel (``Mexican Hat''):
+              \[
+                  \nabla^2 G_\sigma(x,y) = \frac{1}{\pi\sigma^4}\left(\frac{x^2+y^2}{2\sigma^2} - 1\right) \exp\!\left(-\frac{x^2+y^2}{2\sigma^2}\right)
+              \]
+        \item Edges are located at \textbf{zero-crossings} of the LOG response.
+    \end{itemize}
+\end{frame}
+
+% ============== SLIDE 9 ==============
+\begin{frame}{LOG -- Visualization}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Properties of LOG:}
+            \begin{itemize}
+                \item Isotropic (rotationally symmetric).
+                \item Detects edges at zero-crossings.
+                \item Scale controlled by $\sigma$.
+                \item Sensitive to blobs at scale $\sigma$.
+            \end{itemize}
+            \begin{exampleblock}{Typical 5$\times$5 LOG Mask ($\sigma = 1.4$)}
+                \[
+                    \small
+                    \begin{bmatrix}
+                        0  & 0  & -1 & 0  & 0  \\
+                        0  & -1 & -2 & -1 & 0  \\
+                        -1 & -2 & 16 & -2 & -1 \\
+                        0  & -1 & -2 & -1 & 0  \\
+                        0  & 0  & -1 & 0  & 0
+                    \end{bmatrix}
+                \]
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.9\textwidth]{images/log_kernel.png}
+                \caption{3D surface plot of LOG kernel (Mexican Hat shape) and its 2D cross-section}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 10 ==============
+\begin{frame}{Difference of Gaussians (DOG)}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item \textbf{DOG} approximates the LOG and is computationally cheaper:
+                      \[
+                          \text{DOG}(x,y) = G_{\sigma_1} - G_{\sigma_2}, \quad \sigma_2 > \sigma_1
+                      \]
+                \item Typically $\sigma_2 = k\,\sigma_1$ with $k \approx 1.6$.
+                \item DOG $\approx$ LOG because:
+                      \[
+                          G_{\sigma_1} - G_{\sigma_2} \approx (\sigma_2 - \sigma_1) \nabla^2 G_\sigma
+                      \]
+                \item \textbf{Advantages}: Faster computation (subtract two blurred images), directly gives scale information.
+                \item Used extensively in \textbf{SIFT} for keypoint detection.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/dog_concept.png}
+                \caption{Two Gaussian-blurred images and their difference showing blob-like edge response}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 11 ==============
+\begin{frame}{Edge Detectors -- Comparison}
+    \begin{table}[h]
+        \centering
+        \small
+        \begin{tabular}{@{}lccc@{}}
+            \toprule
+            \textbf{Property}  & \textbf{Canny}  & \textbf{LOG}    & \textbf{DOG}  \\
+            \midrule
+            Derivative Order   & 1st             & 2nd             & $\approx$ 2nd \\
+            Edge Criterion     & Gradient max    & Zero-crossing   & Zero-crossing \\
+            Noise Handling     & Gaussian smooth & Gaussian smooth & Inherent      \\
+            Computational Cost & Moderate        & High            & Low           \\
+            Thin Edges         & Yes (NMS)       & Yes             & Approximate   \\
+            Multi-scale        & Manual $\sigma$ & $\sigma$ param  & Natural       \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+    \begin{alertblock}{Key Takeaway}
+        Canny is the most widely used general-purpose edge detector. LOG gives precise zero-crossings. DOG is a fast approximation used in scale-space frameworks like SIFT.
+    \end{alertblock}
+\end{frame}
+
+% =====================================================================
+\section{Line Detection -- Hough Transform}
+% =====================================================================
+
+% ============== SLIDE 12 ==============
+\begin{frame}{Hough Transform -- Concept}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item \textbf{Hough Transform} detects parametric shapes (lines, circles, ellipses) via a \textbf{voting scheme} in parameter space.
+                \item For a line $y = mx + c$, each edge point votes for all $(m,c)$ pairs passing through it.
+                \item Problem: $m \to \infty$ for vertical lines.
+            \end{itemize}
+            \begin{block}{Normal (Polar) Parameterization}
+                \[
+                    x \cos\theta + y \sin\theta = \rho
+                \]
+                where $\rho$ = perpendicular distance from origin, $\theta$ = angle of normal.\\
+                Parameter space: $(\rho, \theta)$ with $\rho \in [-D, D]$, $\theta \in [0, \pi)$.
+            \end{block}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/hough_space_concept.png}
+                \caption{Line in image space mapped to sinusoidal curve in $(\rho,\theta)$ Hough space}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 13 ==============
+\begin{frame}{Hough Transform -- Algorithm}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{Algorithm Steps:}
+            \begin{enumerate}
+                \item Run edge detection (e.g., Canny) on input image.
+                \item Create an \textbf{accumulator array} $A[\rho][\theta]$ initialized to 0.
+                \item For each edge pixel $(x_i, y_i)$:
+                      \begin{itemize}
+                          \item For each $\theta$ from $0$ to $\pi$ (quantized):
+                          \item Compute $\rho = x_i \cos\theta + y_i \sin\theta$
+                          \item Increment $A[\rho][\theta]$
+                      \end{itemize}
+                \item Find \textbf{peaks} in the accumulator $\Rightarrow$ detected lines.
+            \end{enumerate}
+            \begin{alertblock}{Complexity}
+                $O(n \cdot q_\theta)$ where $n$ = number of edge pixels, $q_\theta$ = quantization levels.
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.42\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/hough_accumulator.png}
+                \caption{Accumulator array heatmap with bright peaks at detected line parameters}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 14 ==============
+\begin{frame}{Hough Transform -- Example}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{Example}: Three collinear points $(1,1)$, $(2,2)$, $(3,3)$.\\[6pt]
+            For each point, the Hough curve is:
+            \[
+                \rho = x\cos\theta + y\sin\theta
+            \]
+            \begin{itemize}
+                \item Point $(1,1)$: $\rho = \cos\theta + \sin\theta$
+                \item Point $(2,2)$: $\rho = 2\cos\theta + 2\sin\theta$
+                \item Point $(3,3)$: $\rho = 3\cos\theta + 3\sin\theta$
+            \end{itemize}
+            All three curves intersect at $\theta = 45°$, confirming the line $y=x$.\\
+            At $\theta=45°$: $\rho = \sqrt{2}, 2\sqrt{2}, 3\sqrt{2}$ -- Wait, they intersect where all produce same $(\rho,\theta)$, which is at $\theta = 135°$, $\rho = 0$ (line through origin).
+        \end{column}
+        \begin{column}{0.4\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/hough_example.png}
+                \caption{Sinusoidal Hough curves for three collinear points intersecting at a single $(\rho,\theta)$ peak}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Corner Detection}
+% =====================================================================
+
+% ============== SLIDE 15 ==============
+\begin{frame}{Harris Corner Detector -- Motivation}
+    \begin{itemize}
+        \item \textbf{Corners} are points where intensity changes significantly in \textit{all} directions.
+        \item Consider a small window shifted by $(u,v)$. The \textbf{Sum of Squared Differences (SSD)}:
+              \[
+                  E(u,v) = \sum_{(x,y) \in W} w(x,y)\,[I(x+u, y+v) - I(x,y)]^2
+              \]
+        \item Using Taylor expansion $I(x+u,y+v) \approx I(x,y) + I_x u + I_y v$:
+              \[
+                  E(u,v) \approx \begin{bmatrix} u & v \end{bmatrix}
+                  \mathbf{M}
+                  \begin{bmatrix} u \\ v \end{bmatrix}
+              \]
+    \end{itemize}
+    \begin{block}{Structure Tensor (Second Moment Matrix)}
+        \[
+            \mathbf{M} = \sum_{(x,y)\in W} w(x,y)
+            \begin{bmatrix} I_x^2 & I_x I_y \\ I_x I_y & I_y^2 \end{bmatrix}
+        \]
+    \end{block}
+\end{frame}
+
+% ============== SLIDE 16 ==============
+\begin{frame}{Harris Corner Detector -- Response Function}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item Let $\lambda_1, \lambda_2$ be eigenvalues of $\mathbf{M}$:
+                      \begin{itemize}
+                          \item \textbf{Flat}: $\lambda_1 \approx \lambda_2 \approx 0$
+                          \item \textbf{Edge}: One $\lambda \gg 0$, other $\approx 0$
+                          \item \textbf{Corner}: Both $\lambda_1, \lambda_2$ large
+                      \end{itemize}
+                \item \textbf{Harris response} (no eigenvalues needed):
+                      \[
+                          R = \det(\mathbf{M}) - k\,(\text{trace}(\mathbf{M}))^2
+                      \]
+                      where $\det(\mathbf{M}) = \lambda_1 \lambda_2$, $\text{trace}(\mathbf{M}) = \lambda_1 + \lambda_2$, $k \in [0.04, 0.06]$.
+                \item Decision:
+                      \begin{itemize}
+                          \item $R > T$ $\Rightarrow$ \textbf{Corner}
+                          \item $R < 0, |R|$ large $\Rightarrow$ \textbf{Edge}
+                          \item $|R|$ small $\Rightarrow$ \textbf{Flat}
+                      \end{itemize}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/harris_eigenvalues.png}
+                \caption{$\lambda_1$ vs $\lambda_2$ plot showing corner, edge, and flat regions}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 17 ==============
+\begin{frame}{Harris Corner Detector -- Properties}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{Algorithm Steps:}
+            \begin{enumerate}
+                \item Compute image gradients $I_x$, $I_y$.
+                \item Compute products $I_x^2$, $I_y^2$, $I_x I_y$.
+                \item Apply Gaussian window to each product.
+                \item Compute Harris response $R$ at each pixel.
+                \item Apply non-maximum suppression.
+                \item Threshold $R > T$ to select corners.
+            \end{enumerate}
+            \textbf{Properties:}
+            \begin{itemize}
+                \item \textbf{Rotation invariant} (eigenvalues unchanged).
+                \item \textbf{NOT scale invariant}.
+                \item Partially invariant to affine intensity changes.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.4\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/harris_corners_checkerboard.png}
+                \caption{Image with detected Harris corners marked as red dots overlaid on a checkerboard pattern}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 18 ==============
+\begin{frame}{Hessian Affine Detector}
+    \begin{itemize}
+        \item The \textbf{Hessian matrix} at point $(x,y)$ at scale $\sigma$:
+              \[
+                  \mathbf{H}(x,y,\sigma) = \begin{bmatrix}
+                      L_{xx}(x,y,\sigma) & L_{xy}(x,y,\sigma) \\
+                      L_{xy}(x,y,\sigma) & L_{yy}(x,y,\sigma)
+                  \end{bmatrix}
+              \]
+              where $L_{xx} = \sigma^2 \, \frac{\partial^2}{\partial x^2}(G_\sigma * I)$, etc.
+        \item \textbf{Blob/corner detection}: $\det(\mathbf{H}) = L_{xx}L_{yy} - L_{xy}^2 > T$
+        \item \textbf{Hessian-Affine} extends this with:
+              \begin{enumerate}
+                  \item Multi-scale detection using Hessian determinant.
+                  \item \textbf{Affine adaptation}: Iteratively estimate local affine shape using the second moment matrix.
+                  \item Normalize the region to a canonical circular shape.
+              \end{enumerate}
+    \end{itemize}
+    \begin{block}{Key Advantage}
+        Provides \textbf{affine-invariant} interest regions, enabling matching under viewpoint changes.
+    \end{block}
+\end{frame}
+
+% ============== SLIDE 19 ==============
+\begin{frame}{Harris vs Hessian Affine -- Comparison}
+    \begin{columns}
+        \begin{column}{0.65\textwidth}
+            \begin{table}[h]
+                \centering
+                \scriptsize
+                \begin{tabular}{@{}lcc@{}}
+                    \toprule
+                    \textbf{Property} & \textbf{Harris}               & \textbf{Hessian Affine} \\
+                    \midrule
+                    Detects           & Corners                       & Blobs + Corners         \\
+                    Matrix            & Structure Tensor $\mathbf{M}$ & Hessian $\mathbf{H}$    \\
+                    Scale Inv.        & No                            & Yes (multi-scale)       \\
+                    Affine Inv.       & No                            & Yes (iterative)         \\
+                    Comp.             & Fast                          & Moderate--High          \\
+                    Repeat.           & Good                          & Very Good               \\
+                    \bottomrule
+                \end{tabular}
+            \end{table}
+        \end{column}
+        \begin{column}{0.32\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=1.0\textwidth]{images/hessian_affine_match.png}
+                \caption{Hessian-Affine regions matched across views}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Orientation Histogram}
+% =====================================================================
+
+% ============== SLIDE 20 ==============
+\begin{frame}{Orientation Histogram}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item An \textbf{Orientation Histogram} captures distribution of gradient directions.
+                \item Steps:
+                      \begin{enumerate}
+                          \item Compute gradient magnitude $m$ and orientation $\theta$.
+                          \item Quantize $\theta$ into $n$ bins (e.g., $n=36$ bins).
+                          \item Vote weighted by $m$.
+                      \end{enumerate}
+                \item \textbf{Dominant orientation} = bin with max count.
+                \item Used in SIFT $\Rightarrow$ rotation invariance.
+            \end{itemize}
+            \begin{exampleblock}{Example}
+                If gradients mostly point at $45°$, the histogram peak is in the $[40°, 50°]$ bin.
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/orientation_histogram.png}
+                \caption{Polar histogram of gradient orientations with a dominant peak at $45°$}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{SIFT -- Scale-Invariant Feature Transform}
+% =====================================================================
+
+% ============== SLIDE 21 ==============
+\begin{frame}{SIFT -- Overview (Lowe, 2004)}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \begin{block}{Goal}
+                Detect and describe features invariant to \textbf{scale, rotation}, robust to affine/illumination.
+            \end{block}
+            \textbf{Four Major Steps:}
+            \begin{enumerate}
+                \item \textbf{Scale-space extrema}: DOG pyramid.
+                \item \textbf{Keypoint localization}: Sub-pixel.
+                \item \textbf{Orientation assignment}: Histograms.
+                \item \textbf{Keypoint descriptor}: 128-D vector.
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/sift_pipeline.png}
+                \caption{SIFT pipeline diagram}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 22 ==============
+\begin{frame}{SIFT -- Scale-Space Extrema Detection}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item Build \textbf{Gaussian scale space}.
+                \item Compute \textbf{DOG} images.
+                \item Group into \textbf{octaves}.
+                \item Detect \textbf{local extrema}: 26 neighbours.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/dog_pyramid_extrema.png}
+                \caption{DOG pyramid extrema}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 23 ==============
+\begin{frame}{SIFT -- Keypoint Localization \& Orientation}
+    \textbf{Keypoint Localization:}
+    \begin{itemize}
+        \item Fit 3D quadratic (Taylor expansion) to refine position to sub-pixel accuracy:
+              \[
+                  D(\mathbf{x}) \approx D + \frac{\partial D^T}{\partial \mathbf{x}}\mathbf{x} + \frac{1}{2}\mathbf{x}^T \frac{\partial^2 D}{\partial \mathbf{x}^2}\mathbf{x}
+              \]
+        \item Reject low-contrast points: $|D(\hat{\mathbf{x}})| < 0.03$.
+        \item Reject edges using ratio of principal curvatures (Hessian eigenvalue ratio).
+    \end{itemize}
+    \textbf{Orientation Assignment:}
+    \begin{itemize}
+        \item Build a 36-bin orientation histogram around each keypoint (weighted by magnitude and Gaussian window).
+        \item Dominant peak $\Rightarrow$ keypoint orientation.
+        \item Any peak $\geq 80\%$ of max creates an \textit{additional} keypoint.
+    \end{itemize}
+\end{frame}
+
+% ============== SLIDE 24 ==============
+\begin{frame}{SIFT -- Descriptor}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item Take $16 \times 16$ window, rotate.
+                \item Divide into $4 \times 4$ sub-regions.
+                \item Compute 8-bin histograms.
+                \item \textbf{128}-dim descriptor.
+                \item Normalize and clamp.
+            \end{itemize}
+            \begin{block}{Matching}
+                Use \textbf{Euclidean distance}. Ratio test $< 0.8$.
+            \end{block}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/sift_descriptor.png}
+                \caption{128-D SIFT Descriptor}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{SURF -- Speeded-Up Robust Features}
+% =====================================================================
+
+% ============== SLIDE 25 ==============
+\begin{frame}{SURF -- Overview (Bay et al., 2006)}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item \textbf{SURF} is faster (approximations).
+                \item Key ideas:
+                      \begin{enumerate}
+                          \item \textbf{Integral images}.
+                          \item \textbf{Hessian-based} detection.
+                          \item \textbf{Haar wavelet} responses.
+                      \end{enumerate}
+            \end{itemize}
+            \begin{block}{Integral Image}
+                Sum computed in \textbf{constant time}.
+            \end{block}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/surf_box_filters.png}
+                \caption{Box filter approximations}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 26 ==============
+\begin{frame}{SURF -- Detection and Description}
+    \textbf{Interest Point Detection:}
+    \begin{itemize}
+        \item Approximate Hessian determinant using box filters at multiple scales.
+        \item Non-maximum suppression in $3 \times 3 \times 3$ neighbourhood.
+        \item Sub-pixel interpolation for localization.
+    \end{itemize}
+    \textbf{Orientation Assignment:}
+    \begin{itemize}
+        \item Compute Haar wavelet responses in $x$ and $y$ within radius $6s$.
+        \item Sliding window of $\pi/3$ finds dominant orientation.
+    \end{itemize}
+    \textbf{Descriptor:}
+    \begin{itemize}
+        \item $4 \times 4$ sub-regions around keypoint.
+        \item Each sub-region: $(\sum d_x, \sum d_y, \sum|d_x|, \sum|d_y|)$ $\Rightarrow$ 4 values.
+        \item Total: $4 \times 4 \times 4 = \mathbf{64}$-dimensional descriptor.
+    \end{itemize}
+\end{frame}
+
+% ============== SLIDE 27 ==============
+\begin{frame}{SIFT vs SURF -- Comparison}
+    \begin{columns}
+        \begin{column}{0.65\textwidth}
+            \begin{table}[h]
+                \centering
+                \scriptsize
+                \begin{tabular}{@{}lcc@{}}
+                    \toprule
+                    \textbf{Property}  & \textbf{SIFT} & \textbf{SURF}          \\
+                    \midrule
+                    Detector           & DOG           & Hessian (approx)       \\
+                    Dim.               & 128           & 64                     \\
+                    Speed              & Slow          & $\sim$3$\times$ Faster \\
+                    Scale Inv.         & Yes           & Yes                    \\
+                    Rot. Inv.          & Yes           & Yes                    \\
+                    Robust             & Excellent     & Good                   \\
+                    \bottomrule
+                \end{tabular}
+            \end{table}
+        \end{column}
+        \begin{column}{0.32\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=1.0\textwidth]{images/sift_vs_surf_matches.png}
+                \caption{SIFT (left) vs SURF (right)}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{HOG -- Histogram of Oriented Gradients}
+% =====================================================================
+
+% ============== SLIDE 28 ==============
+\begin{frame}{HOG -- Overview (Dalal \& Triggs, 2005)}
+    \begin{itemize}
+        \item \textbf{HOG} describes local shape via distribution of gradient directions.
+        \item Originally designed for \textbf{pedestrian detection}.
+        \item Key idea: Object appearance can be characterized by the distribution of local intensity gradients, even without precise knowledge of positions.
+    \end{itemize}
+    \textbf{HOG Pipeline:}
+    \begin{enumerate}
+        \item Compute gradients ($[-1, 0, 1]$ filter).
+        \item Divide image into \textbf{cells} (e.g., $8 \times 8$ pixels).
+        \item Compute 9-bin orientation histogram per cell (unsigned: $0°$--$180°$).
+        \item Group cells into overlapping \textbf{blocks} (e.g., $2 \times 2$ cells).
+        \item Normalize each block (L2-norm) $\Rightarrow$ illumination invariance.
+        \item Concatenate all block descriptors.
+    \end{enumerate}
+\end{frame}
+
+% ============== SLIDE 29 ==============
+\begin{frame}{HOG -- Descriptor Construction}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{Example Calculation:}
+            \begin{itemize}
+                \item Image window: $64 \times 128$ pixels.
+                \item Cell size: $8 \times 8$ $\Rightarrow$ $8 \times 16$ cells.
+                \item Block size: $2 \times 2$ cells with stride 1 cell.
+                \item Number of blocks: $7 \times 15 = 105$ blocks.
+                \item Each block: $2 \times 2 \times 9 = 36$ values.
+                \item Total descriptor: $105 \times 36 = \mathbf{3780}$ dimensions.
+            \end{itemize}
+            \begin{alertblock}{Key Properties}
+                \begin{itemize}
+                    \item Captures edge/gradient structure.
+                    \item Block normalization handles illumination.
+                    \item Dense, overlapping computation.
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.4\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/hog_visualization.png}
+                \caption{HOG visualization -- image of a person with gradient orientation ``hedgehog'' glyphs overlaid on cells}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{GLOH -- Gradient Location and Orientation Histogram}
+% =====================================================================
+
+% ============== SLIDE 30 ==============
+\begin{frame}{GLOH -- Gradient Location and Orientation Histogram}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item \textbf{GLOH} (Mikolajczyk \& Schmid, 2005): SIFT extension.
+                \item Uses \textbf{log-polar grid}:
+                      \begin{itemize}
+                          \item 3 radial bins (6, 11, 15 px).
+                          \item 8 angular bins (outer), 1 central.
+                          \item Total: 17 spatial bins.
+                      \end{itemize}
+                \item 16-bin orientation histogram $\Rightarrow$ 272 dims.
+                \item \textbf{PCA} reduction to \textbf{128 dims}.
+            \end{itemize}
+            \begin{block}{Advantage over SIFT}
+                Log-polar grid better captures radial structure, higher distinctiveness.
+            \end{block}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/gloh_grid.png}
+                \caption{SIFT (Left) vs GLOH (Right)}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Scale-Space Analysis}
+% =====================================================================
+
+% ============== SLIDE 31 ==============
+\begin{frame}{Scale-Space Analysis -- Motivation}
+    \begin{itemize}
+        \item Real-world objects exist at \textbf{multiple scales}. A feature detector must handle this.
+        \item \textbf{Scale space}: Family of smoothed images $L(x,y,\sigma) = G_\sigma * I(x,y)$ parametrized by scale $\sigma$.
+        \item The Gaussian is the \textbf{unique} kernel that satisfies the scale-space axioms (linearity, shift invariance, semi-group, non-enhancement of local extrema).
+        \item Scale-space representation allows detecting structures at their \textbf{characteristic scale}.
+    \end{itemize}
+    \begin{block}{Scale-Space Axiom}
+        \[
+            L(x,y,\sigma) = G(x,y;\sigma) * I(x,y), \quad \frac{\partial L}{\partial \sigma} = \sigma\,\nabla^2 L
+        \]
+        This is the \textbf{diffusion equation} -- the scale parameter acts like time in heat diffusion.
+    \end{block}
+\end{frame}
+
+% ============== SLIDE 32 ==============
+\begin{frame}{Image Pyramids}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \small
+            \begin{itemize}
+                \item \textbf{Image pyramid}: multi-resolution.
+                \item \textbf{Gaussian Pyramid}: Smooth/subsample ($\downarrow 2$).
+                      \begin{itemize}
+                          \item $G_0 = I$
+                          \item $G_{l+1} = \text{subsample}(G_\sigma * G_l)$
+                      \end{itemize}
+                \item \textbf{Laplacian Pyramid}: Band-pass details.
+                      \[
+                          Lap_l = G_l - \text{upsample}(G_{l+1})
+                      \]
+                \item \textbf{Overcomplete}, perfect recon.
+            \end{itemize}
+            \begin{exampleblock}{Applications}
+                Compression, blending, multi-scale.
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.38\textwidth}
+            \begin{figure}[h]
+                \centering
+                \includegraphics[width=0.95\textwidth]{images/image_pyramids.png}
+                \caption{Gaussian (left) Laplacian (right)}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============== SLIDE 33 ==============
+\begin{frame}{Gaussian Derivative Filters}
+    \begin{itemize}
+        \item \textbf{Gaussian derivative filters} combine smoothing and differentiation in one step:
+              \[
+                  \frac{\partial}{\partial x}(G_\sigma * I) = \left(\frac{\partial G_\sigma}{\partial x}\right) * I
+              \]
+        \item First-order derivatives of Gaussian:
+              \[
+                  G_x = \frac{\partial G}{\partial x} = -\frac{x}{2\pi\sigma^4}\exp\!\left(-\frac{x^2+y^2}{2\sigma^2}\right)
+              \]
+        \item Second-order: $G_{xx}$, $G_{yy}$, $G_{xy}$ -- used in Hessian-based detection.
+        \item These form a \textbf{steerable filter} basis: any rotated derivative can be expressed as a linear combination of basis filters.
+    \end{itemize}
+
+\end{frame}
+
+% ============== SLIDE 34 ==============
+\begin{frame}{Scale-Space Feature Detection Summary}
+    \begin{itemize}
+        \item \textbf{Scale selection}: Detect features at the scale where a normalized derivative response is maximal.
+        \item \textbf{Normalized derivatives}: $\sigma^n \, \nabla^n G_\sigma$ ensures comparable response across scales.
+        \item \textbf{Characteristic scale}: The scale $\sigma^*$ at which the normalized response achieves its maximum.
+              \[
+                  \sigma^* = \arg\max_\sigma \left|\sigma^2 \nabla^2 L(x,y,\sigma)\right|
+              \]
+    \end{itemize}
+    \begin{block}{Multi-Scale Detection Pipeline}
+        \begin{enumerate}
+            \item Build scale-space (Gaussian pyramid or dense scales).
+            \item Compute normalized feature response at each scale.
+            \item Detect extrema across both space \textit{and} scale.
+            \item Extract features at their characteristic scale.
+        \end{enumerate}
+    \end{block}
+\end{frame}
+
+% =====================================================================
+\section{Gabor Filters}
+% =====================================================================
+
+% ============== SLIDE 35 ==============
+\begin{frame}{Gabor Filters -- Definition}
+    \begin{itemize}
+        \item A \textbf{Gabor filter} is a Gaussian modulated by a sinusoidal wave:
+              \[
+                  g(x,y;\lambda,\theta,\psi,\sigma,\gamma) = \exp\!\left(-\frac{x'^2 + \gamma^2 y'^2}{2\sigma^2}\right) \cos\!\left(2\pi\frac{x'}{\lambda} + \psi\right)
+              \]
+              where \quad $x' = x\cos\theta + y\sin\theta$, \quad $y'= -x\sin\theta + y\cos\theta$.
+        \item Parameters:
+              \begin{itemize}
+                  \item $\lambda$ -- wavelength of sinusoidal component.
+                  \item $\theta$ -- orientation of the filter.
+                  \item $\psi$ -- phase offset.
+                  \item $\sigma$ -- Gaussian envelope width.
+                  \item $\gamma$ -- spatial aspect ratio.
+              \end{itemize}
+    \end{itemize}
+
+\end{frame}
+
+% ============== SLIDE 36 ==============
+\begin{frame}{Gabor Filters -- Properties and Applications}
+            \textbf{Properties:}
+            \begin{itemize}
+                \item Achieve optimal \textbf{joint resolution} in space and frequency (uncertainty principle).
+                \item Mimic simple cells in the \textbf{human visual cortex}.
+                \item Selective to \textbf{orientation} and \textbf{spatial frequency}.
+            \end{itemize}
+            \textbf{Gabor Filter Bank:}
+            \begin{itemize}
+                \item Apply filters at multiple orientations ($\theta$) and scales ($\lambda$).
+                \item Typically: 4--8 orientations $\times$ 3--5 scales.
+                \item Feature vector = concatenated filter responses.
+            \end{itemize}
+            \textbf{Applications:}
+            \begin{itemize}
+                \item Texture analysis and segmentation.
+                \item Face recognition, fingerprint enhancement.
+                \item Character recognition (OCR).
+            \end{itemize}
+\end{frame}
+
+% =====================================================================
+\section{Discrete Wavelet Transform (DWT)}
+% =====================================================================
+
+% ============== SLIDE 37 ==============
+\begin{frame}{DWT -- Discrete Wavelet Transform}
+    \begin{itemize}
+        \item \textbf{DWT} decomposes an image into frequency sub-bands at multiple scales.
+        \item Uses a pair of filters: \textbf{low-pass} (scaling function $\phi$) and \textbf{high-pass} (wavelet $\psi$).
+        \item For 2D images, apply row-wise then column-wise:
+    \end{itemize}
+    \begin{center}
+        \begin{tabular}{|c|c|}
+            \hline
+            \textbf{LL} (Approximation)   & \textbf{LH} (Horizontal detail) \\
+            \hline
+            \textbf{HL} (Vertical detail) & \textbf{HH} (Diagonal detail)   \\
+            \hline
+        \end{tabular}
+    \end{center}
+    \begin{itemize}
+        \item \textbf{LL} = low-pass in both directions (coarse approximation).
+        \item \textbf{LH, HL, HH} = detail coefficients capturing edges at different orientations.
+        \item Multi-level DWT: recursively decompose the LL sub-band.
+    \end{itemize}
+
+\end{frame}
+
+% ============== SLIDE 38 ==============
+\begin{frame}{DWT -- Haar Wavelet Example}
+    \begin{itemize}
+        \item \textbf{Haar wavelet} is the simplest wavelet:
+              \[
+                  \psi(x) = \begin{cases} 1 & 0 \leq x < 0.5 \\ -1 & 0.5 \leq x < 1 \\ 0 & \text{otherwise} \end{cases}
+              \]
+        \item Low-pass filter: $h = \frac{1}{\sqrt{2}}[1, 1]$, \quad High-pass filter: $g = \frac{1}{\sqrt{2}}[1, -1]$.
+    \end{itemize}
+    \begin{exampleblock}{1D Haar DWT Example}
+        Signal: $[4, 6, 10, 12]$ \\[4pt]
+        Averages (LL): $\frac{4+6}{2}=5$, $\frac{10+12}{2}=11$ $\Rightarrow$ $[5, 11]$\\[2pt]
+        Differences (HL): $\frac{4-6}{2}=-1$, $\frac{10-12}{2}=-1$ $\Rightarrow$ $[-1, -1]$\\[2pt]
+        DWT coefficients: $[5, 11 \;|\; -1, -1]$
+    \end{exampleblock}
+    \textbf{Applications in CV}: Texture classification, image compression (JPEG 2000), feature extraction for recognition.
+\end{frame}
+
+% ============== SLIDE 39 ==============
+\begin{frame}{Gabor vs DWT -- Comparison}
+    \begin{table}[h]
+        \centering
+        \small
+        \begin{tabular}{@{}lcc@{}}
+            \toprule
+            \textbf{Property}       & \textbf{Gabor Filters} & \textbf{DWT}                \\
+            \midrule
+            Basis                   & Non-orthogonal         & Orthogonal                  \\
+            Redundancy              & High (overcomplete)    & Minimal (critical sampling) \\
+            Orientation Selectivity & Continuous $\theta$    & Fixed (H, V, D)             \\
+            Frequency Resolution    & Tunable $\lambda$      & Dyadic scales               \\
+            Reconstruction          & Approximate            & Perfect                     \\
+            Computation             & Moderate               & Fast (pyramidal)            \\
+            Bio-inspired            & Yes (V1 cortex)        & No                          \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+    \begin{block}{When to Use}
+        \textbf{Gabor}: When fine orientation and frequency tuning is needed (face, texture).\\
+        \textbf{DWT}: When compact, non-redundant multi-scale representation is needed (compression, fast features).
+    \end{block}
+\end{frame}
+
+% =====================================================================
+\section{Derivation: Harris Corner Detector}
+% =====================================================================
+
+% ============== SLIDE 40 ==============
+\begin{frame}{Derivation -- Harris Corner Response Function}
+    \textbf{Goal}: Derive the Harris corner response $R$ from the auto-correlation function.\\[6pt]
+    \textbf{Step 1}: Define the weighted SSD for a shift $(u,v)$:
+    \[
+        E(u,v) = \sum_{(x,y)} w(x,y)\,\big[I(x+u,y+v) - I(x,y)\big]^2
+    \]
+    \textbf{Step 2}: Apply first-order Taylor expansion:
+    \[
+        I(x+u,y+v) \approx I(x,y) + I_x\,u + I_y\,v
+    \]
+    \[
+        \Rightarrow E(u,v) \approx \sum_{(x,y)} w(x,y)\,\big[I_x\,u + I_y\,v\big]^2
+    \]
+    \textbf{Step 3}: Expand the square:
+    \[
+        E(u,v) \approx \sum w(x,y)\,\big[I_x^2\,u^2 + 2I_xI_y\,uv + I_y^2\,v^2\big]
+    \]
+\end{frame}
+
+% ============== SLIDE 41 ==============
+\begin{frame}{Derivation -- Harris Corner Response (cont.)}
+    \textbf{Step 4}: Write in matrix form:
+    \[
+        E(u,v) \approx \begin{bmatrix} u & v \end{bmatrix}
+        \underbrace{\sum_{(x,y)} w(x,y) \begin{bmatrix} I_x^2 & I_xI_y \\ I_xI_y & I_y^2 \end{bmatrix}}_{\mathbf{M}}
+        \begin{bmatrix} u \\ v \end{bmatrix}
+    \]
+    \textbf{Step 5}: Analyze eigenvalues $\lambda_1, \lambda_2$ of $\mathbf{M}$:
+    \begin{itemize}
+        \item $E(u,v)$ is an ellipse with axes $\lambda_1, \lambda_2$.
+        \item Both large $\Rightarrow$ corner; one large $\Rightarrow$ edge; both small $\Rightarrow$ flat.
+    \end{itemize}
+    \textbf{Step 6}: Define Harris response (avoids eigenvalue computation):
+    \[
+        \boxed{R = \det(\mathbf{M}) - k\,[\text{trace}(\mathbf{M})]^2 = \lambda_1\lambda_2 - k(\lambda_1+\lambda_2)^2}
+    \]
+    where $k \in [0.04, 0.06]$. \quad \textbf{Corner}: $R > 0$ (large); \textbf{Edge}: $R < 0$; \textbf{Flat}: $|R| \approx 0$. \qed
+\end{frame}
+
+% =====================================================================
+\section{Numerical Problems}
+% =====================================================================
+
+% ============== SLIDE 42 ==============
+\begin{frame}{Numerical 1: Gradient at a Pixel}
+    \begin{block}{Problem}
+        Given a $3 \times 3$ image patch:
+        $\begin{bmatrix} 1 & 1 & 1 \\ 1 & 1 & 3 \\ 1 & 1 & 1 \end{bmatrix}$. \\
+        Find $I_x$ and $I_y$ at center pixel using: $I_x = I(\text{right}) - I(\text{left})$, $I_y = I(\text{bottom}) - I(\text{top})$.
+    \end{block}
+    \textbf{Solution:}
+    \begin{itemize}
+        \item Center pixel value $= 1$
+        \item $I_x = I(\text{right}) - I(\text{left}) = 3 - 1 = \mathbf{2}$
+        \item $I_y = I(\text{bottom}) - I(\text{top}) = 1 - 1 = \mathbf{0}$
+        \item Magnitude: $|\nabla I| = \sqrt{2^2 + 0^2} = \sqrt{4} = \mathbf{2}$
+        \item Direction: $\theta = \arctan(0/2) = \arctan(0) = \mathbf{0°}$
+    \end{itemize}
+    \begin{alertblock}{Meaning}
+        Gradient is purely horizontal ($\theta=0°$), so there is a \textbf{vertical edge} to the right of the center pixel.
+    \end{alertblock}
+\end{frame}
+
+% ============== SLIDE 43 ==============
+\begin{frame}{Numerical 2: Harris Corner Response}
+    \begin{block}{Problem}
+        Given: $\mathbf{M} = \begin{bmatrix} 5 & 0 \\ 0 & 5 \end{bmatrix}$, $k = 0.04$. Find $R$ and classify.
+    \end{block}
+    \textbf{Solution:}
+    \begin{itemize}
+        \item $\det(\mathbf{M}) = 5 \times 5 - 0 \times 0 = \mathbf{25}$
+        \item $\text{trace}(\mathbf{M}) = 5 + 5 = \mathbf{10}$
+        \item $R = \det - k \cdot (\text{trace})^2 = 25 - 0.04 \times 100 = 25 - 4 = \boxed{21}$
+        \item $R > 0 \Rightarrow$ \textbf{Corner} \checkmark
+    \end{itemize}
+    \vspace{4pt}
+    \textbf{If instead} $\mathbf{M} = \begin{bmatrix} 10 & 0 \\ 0 & 0 \end{bmatrix}$:
+    \begin{itemize}
+        \item $\det = 0$, trace $= 10$, $R = 0 - 0.04 \times 100 = -4 \Rightarrow$ \textbf{Edge}
+    \end{itemize}
+    \textbf{If instead} $\mathbf{M} = \begin{bmatrix} 0 & 0 \\ 0 & 0 \end{bmatrix}$:
+    \begin{itemize}
+        \item $R = 0 \Rightarrow$ \textbf{Flat region}
+    \end{itemize}
+\end{frame}
+
+% ============== SLIDE 44 ==============
+\begin{frame}{Numerical 3: Hough Transform -- Compute $\rho$}
+    \begin{block}{Problem}
+        An edge point is at $(x, y) = (1, 0)$. Compute $\rho$ for $\theta = 0°$ and $\theta = 90°$.
+    \end{block}
+    \textbf{Solution:}\\[4pt]
+    Formula: $\rho = x \cos\theta + y \sin\theta$\\[6pt]
+    \begin{itemize}
+        \item At $\theta = 0°$:
+              \[
+                  \rho = 1 \cdot \cos 0° + 0 \cdot \sin 0° = 1 \times 1 + 0 = \boxed{1}
+              \]
+        \item At $\theta = 90°$:
+              \[
+                  \rho = 1 \cdot \cos 90° + 0 \cdot \sin 90° = 1 \times 0 + 0 = \boxed{0}
+              \]
+    \end{itemize}
+    \begin{alertblock}{Meaning}
+        At $\theta=0°$, the line is vertical at $x=1$. At $\theta=90°$, the line is horizontal passing through the origin. Each edge point traces a curve in $(\rho,\theta)$ space.
+    \end{alertblock}
+\end{frame}
+
+% ============== SLIDE 45 ==============
+\begin{frame}{Numerical 4: SIFT \& SURF Descriptor Size}
+    \begin{block}{Problem}
+        Calculate the SIFT and SURF descriptor sizes.
+    \end{block}
+    \textbf{SIFT:}
+    \begin{itemize}
+        \item Sub-regions: $4 \times 4 = 16$
+        \item Bins per sub-region: $8$
+        \item Total $= 16 \times 8 = \boxed{128}$ dimensions
+    \end{itemize}
+    \textbf{SURF:}
+    \begin{itemize}
+        \item Sub-regions: $4 \times 4 = 16$
+        \item Values per sub-region: $4$ \quad ($\sum d_x, \sum d_y, \sum|d_x|, \sum|d_y|$)
+        \item Total $= 16 \times 4 = \boxed{64}$ dimensions
+    \end{itemize}
+    \begin{exampleblock}{Key Takeaway}
+        SURF descriptor is \textbf{half} the size of SIFT $\Rightarrow$ faster to compute and match, but slightly less distinctive.
+    \end{exampleblock}
+\end{frame}
+
+% ============== SLIDE 46 ==============
+\begin{frame}{Numerical 5: Image Pyramid Sizes}
+    \begin{block}{Problem}
+        An image is $128 \times 128$. Build a 4-level Gaussian pyramid (subsample by 2). What is the size at each level?
+    \end{block}
+    \textbf{Solution:}\\[4pt]
+    \begin{center}
+        \begin{tabular}{ccc}
+            \toprule
+            \textbf{Level} & \textbf{Size}    & \textbf{Pixels} \\
+            \midrule
+            0              & $128 \times 128$ & 16,384          \\
+            1              & $64 \times 64$   & 4,096           \\
+            2              & $32 \times 32$   & 1,024           \\
+            3              & $16 \times 16$   & 256             \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+    Total pixels $= 16384 + 4096 + 1024 + 256 = \mathbf{21{,}760}$\\[4pt]
+    Overhead $= \frac{21760}{16384} \approx 1.33\times$ original $\Rightarrow$ only 33\% extra memory!
+\end{frame}
+
+% ============== SLIDE 47 ==============
+\begin{frame}{Numerical 6: Haar DWT (4 values)}
+    \begin{block}{Problem}
+        Apply 1 level of Haar DWT to $f = [6, 2, 8, 4]$.
+    \end{block}
+    \textbf{Solution:}\\[4pt]
+    \textbf{Averages} (approximation):
+    \begin{itemize}
+        \item $a_1 = \frac{6+2}{2} = \mathbf{4}$,\quad $a_2 = \frac{8+4}{2} = \mathbf{6}$
+    \end{itemize}
+    \textbf{Differences} (detail):
+    \begin{itemize}
+        \item $d_1 = \frac{6-2}{2} = \mathbf{2}$,\quad $d_2 = \frac{8-4}{2} = \mathbf{2}$
+    \end{itemize}
+    \textbf{Output}: $[4, 6 \mid 2, 2]$\\[6pt]
+    \textbf{Reconstruct}: \\
+    $a_1 + d_1 = 4+2=6$ \checkmark, \; $a_1 - d_1 = 4-2=2$ \checkmark \\
+    $a_2 + d_2 = 6+2=8$ \checkmark, \; $a_2 - d_2 = 6-2=4$ \checkmark
+\end{frame}
+
+% =====================================================================
+\section{Long Numerical Problems}
+% =====================================================================
+
+% ============== SLIDE 48 ==============
+\begin{frame}{Long Numerical 1: Canny Edge Detection (Step-by-Step)}
+    \begin{block}{Problem}
+        Given a $5 \times 5$ image. After Gaussian smoothing, the center $3 \times 3$ gradient magnitudes and directions are:
+    \end{block}
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \textbf{Gradient Magnitude:}
+            \[
+                \begin{bmatrix} 2 & 8 & 3 \\ 1 & 10 & 4 \\ 2 & 7 & 3 \end{bmatrix}
+            \]
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \textbf{Gradient Direction:}
+            \[
+                \begin{bmatrix} 45° & 90° & 45° \\ 0° & 90° & 0° \\ 135° & 90° & 135° \end{bmatrix}
+            \]
+        \end{column}
+    \end{columns}
+    \vspace{4pt}
+    Apply: (a) Non-Maximum Suppression (NMS), (b) Double thresholding with $T_H = 7$, $T_L = 3$.\\[6pt]
+    \textbf{Step 1 -- NMS at center pixel} (magnitude $= 10$, direction $= 90°$):\\
+    Compare along gradient direction (vertical): neighbours are $8$ (top) and $7$ (bottom).\\
+    $10 > 8$ and $10 > 7$ $\Rightarrow$ \textbf{keep} center pixel (it is a local max).
+\end{frame}
+
+% ============== SLIDE 49 ==============
+\begin{frame}{Long Numerical 1: Canny (cont.)}
+    \textbf{Step 1 (cont.) -- NMS for all pixels:}\\[4pt]
+    \begin{tabular}{cccc}
+        \toprule
+        \textbf{Pixel}  & \textbf{Mag} & \textbf{Dir}          & \textbf{After NMS}          \\
+        \midrule
+        $(0,0)$: mag=2  & $45°$        & compare diag: 10, --  & suppressed (2 $<$ 10)       \\
+        $(0,1)$: mag=8  & $90°$        & compare vert: --, 10  & suppressed (8 $<$ 10)       \\
+        $(1,0)$: mag=1  & $0°$         & compare horiz: --, 10 & suppressed (1 $<$ 10)       \\
+        $(1,1)$: mag=10 & $90°$        & compare: 8, 7         & \textbf{kept} (10 $>$ both) \\
+        $(2,1)$: mag=7  & $90°$        & compare: 10, --       & suppressed (7 $<$ 10)       \\
+        \bottomrule
+    \end{tabular}\\[6pt]
+    \textbf{Step 2 -- Thresholding} ($T_H = 7$, $T_L = 3$):\\
+    \begin{itemize}
+        \item Center pixel: mag $= 10 > T_H = 7$ $\Rightarrow$ \textbf{Strong edge} \checkmark
+        \item All other pixels were suppressed in NMS $\Rightarrow$ not edges.
+    \end{itemize}
+    \textbf{Result}: Only the center pixel is detected as a \textbf{strong edge point}.
+\end{frame}
+
+% ============== SLIDE 50 ==============
+\begin{frame}{Long Numerical 2: Harris Corner Detection (Full Example)}
+    \begin{block}{Problem}
+        A $3 \times 3$ image window has pixel values:
+        $I = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 1 & 5 \\ 1 & 5 & 5 \end{bmatrix}$. \\
+        Compute Harris response at center pixel with $k = 0.05$ (use simple differences, no Gaussian weighting for simplicity).
+    \end{block}
+    \textbf{Step 1 -- Compute gradients} at each pixel (using right-left, bottom-top):
+
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \textbf{$I_x$ (right $-$ left):}\\
+            Only center has both neighbours:\\
+            $I_x = I(1,2) - I(1,0) = 5 - 1 = 4$
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \textbf{$I_y$ (bottom $-$ top):}\\
+            $I_y = I(2,1) - I(0,1) = 5 - 1 = 4$
+        \end{column}
+    \end{columns}
+    \vspace{6pt}
+    \textbf{Step 2 -- Form structure tensor} $\mathbf{M}$ at center (single pixel, no window sum needed):
+    \[
+        \mathbf{M} = \begin{bmatrix} I_x^2 & I_x I_y \\ I_x I_y & I_y^2 \end{bmatrix}
+        = \begin{bmatrix} 16 & 16 \\ 16 & 16 \end{bmatrix}
+    \]
+\end{frame}
+
+% ============== SLIDE 51 ==============
+\begin{frame}{Long Numerical 2: Harris Corner (cont.)}
+    \textbf{Step 3 -- Compute} $\det(\mathbf{M})$ and $\text{trace}(\mathbf{M})$:
+    \begin{itemize}
+        \item $\det(\mathbf{M}) = 16 \times 16 - 16 \times 16 = 256 - 256 = \mathbf{0}$
+        \item $\text{trace}(\mathbf{M}) = 16 + 16 = \mathbf{32}$
+    \end{itemize}
+    \textbf{Step 4 -- Compute Harris response}:
+    \[
+        R = \det(\mathbf{M}) - k \cdot [\text{trace}(\mathbf{M})]^2 = 0 - 0.05 \times 32^2 = 0 - 0.05 \times 1024
+    \]
+    \[
+        \boxed{R = -51.2}
+    \]
+    \textbf{Step 5 -- Classification}:
+    \begin{itemize}
+        \item $R < 0$ (negative) $\Rightarrow$ \textbf{Edge point}, not a corner.
+    \end{itemize}
+    \begin{exampleblock}{Interpretation}
+        Since $I_x = I_y = 4$ and both are equal, the gradient points in one direction ($45°$). The eigenvalues are $\lambda_1 = 32, \lambda_2 = 0$, meaning intensity changes along only one direction $\Rightarrow$ this is an \textbf{edge}, not a corner.
+    \end{exampleblock}
+\end{frame}
+
+% =====================================================================
+\section{Summary}
+% =====================================================================
+
+% ============== SLIDE 52 ==============
+\begin{frame}{Chapter Summary}
+    \begin{enumerate}
+        \item \textbf{Edge Detection}: Canny (optimal multi-step), LOG (zero-crossings), DOG (fast approx.).
+        \item \textbf{Line Detection}: Hough Transform -- voting in $(\rho,\theta)$ parameter space.
+        \item \textbf{Corner Detection}: Harris (structure tensor $\mathbf{M}$, response $R$); Hessian Affine (scale + affine invariant).
+        \item \textbf{Orientation Histogram}: Gradient direction distribution $\Rightarrow$ rotation invariance.
+        \item \textbf{SIFT}: 128-D descriptor, scale \& rotation invariant (DOG + gradient histograms).
+        \item \textbf{SURF}: 64-D, faster SIFT alternative (integral images + Haar wavelets).
+        \item \textbf{HOG}: Dense gradient histograms with block normalization (pedestrian detection).
+        \item \textbf{GLOH}: Log-polar SIFT variant + PCA for compactness.
+        \item \textbf{Scale-Space}: Gaussian pyramids, derivative filters for multi-scale analysis.
+        \item \textbf{Gabor \& DWT}: Frequency-domain features for texture analysis.
+    \end{enumerate}
+\end{frame}
+
+% ============== SLIDE 53 ==============
+\begin{frame}{References}
+    \begin{thebibliography}{99}
+        \footnotesize
+        \bibitem{canny86} J. Canny, ``A Computational Approach to Edge Detection,'' \textit{IEEE TPAMI}, 1986.
+        \bibitem{harris88} C. Harris and M. Stephens, ``A Combined Corner and Edge Detector,'' \textit{Alvey Vision Conf.}, 1988.
+        \bibitem{lowe04} D. Lowe, ``Distinctive Image Features from Scale-Invariant Keypoints,'' \textit{IJCV}, 2004.
+        \bibitem{bay06} H. Bay et al., ``SURF: Speeded Up Robust Features,'' \textit{ECCV}, 2006.
+        \bibitem{dalal05} N. Dalal and B. Triggs, ``Histograms of Oriented Gradients for Human Detection,'' \textit{CVPR}, 2005.
+        \bibitem{mikolajczyk05} K. Mikolajczyk and C. Schmid, ``A Performance Evaluation of Local Descriptors,'' \textit{IEEE TPAMI}, 2005.
+        \bibitem{gonzalez} R.C. Gonzalez and R.E. Woods, \textit{Digital Image Processing}, Prentice Hall.
+        \bibitem{szeliski} R. Szeliski, \textit{Computer Vision: Algorithms and Applications}, Springer.
+    \end{thebibliography}
+\end{frame}
+
+\end{document}
